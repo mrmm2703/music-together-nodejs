@@ -76,10 +76,10 @@ io.on("connection", (socket) => {
         })
 
         // Add an ENTER group log
-        // db.insertGroupLog(socket.spotifyId, socket.group, "ENTER")
+        db.insertGroupLog(socket.spotifyId, socket.group, "ENTER")
 
         // Update users table with group ID
-        // db.updateUserGroupId(socket.spotifyId, socket.group)
+        db.updateUserGroupId(socket.spotifyId, socket.group)
 
         console.log(groups)
     })
@@ -87,7 +87,7 @@ io.on("connection", (socket) => {
     // When user leaves a group session
     socket.on("disconnect", () => {
         // Add an EXIT group log
-        // db.insertGroupLog(socket.spotifyId, socket.group, "EXIT")
+        db.insertGroupLog(socket.spotifyId, socket.group, "EXIT")
 
         // Tell other users that the user has disconnected
         io.to(socket.group).emit("userLeft", socket.spotifyId)
@@ -101,7 +101,7 @@ io.on("connection", (socket) => {
         }
 
         // Update users table with group ID
-        // db.updateUserGroupId(socket.spotifyId, null)
+        db.updateUserGroupId(socket.spotifyId, null)
         console.log(groups)
     })
 
@@ -122,7 +122,7 @@ io.on("connection", (socket) => {
             // Tell client message was banned
             io.to(socket.id).emit("messageBanned", word)
             // Log banned word usage in database
-            // db.logBannedWord(word, socket.spotifyId, socket.group)
+            db.logBannedWord(word, socket.spotifyId, socket.group)
         } else {
             // Send to all clients new message
             io.to(socket.group).emit("newMessage", {
@@ -132,7 +132,12 @@ io.on("connection", (socket) => {
         }
 
         // Log the message in database
-        // db.logMessage(data, socket.spotifyId, socket.group)
+        db.logMessage(data, socket.spotifyId, socket.group)
+    })
+
+    // When a user is typing
+    socket.on("typing", () => {
+        io.to(socket.group).emit("typing", socket.spotifyId)
     })
 })
 
