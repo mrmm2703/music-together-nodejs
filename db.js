@@ -11,7 +11,8 @@ class DatabasePool {
             host: db_config.host,
             user: db_config.username,
             password: db_config.password,
-            database: db_config.database
+            database: db_config.database,
+            charset: "utf8mb4"
         })
     }
 
@@ -62,16 +63,30 @@ class DatabasePool {
     }
 
     // When a banned word was sent
-    logBannedWord(word, spotifyId, groupId) {
-        let sql = "INSERT INTO bannedWordsUse (banUsgWordID, banUsgSenderID, banUsgGroupID) " + 
-        "VALUES ((SELECT wordID FROM bannedWords WHERE word=?), ?, ?)"
-        let query = mysql.format(sql, [word, spotifyId, groupId])
-        this.pool.query(query, (error, response) => {
+    logBannedWord(word, spotifyId, groupId, message) {
+        let sql = "INSERT INTO messages (msgSenderID, msgContent, msgGroupID) VALUES (?,?,?)"
+        let query = mysql.format(sql, [spotifyId, message, groupId])
+        let id;
+        this.pool.query(query, (error, data) => {
             if (error) {
-                console.error(`DatabasePool::logBannedWord(${word}, ${spotifyId}, ${groupId})`)
-                console.error(error)
+                console.log(`DatabasePool::logBannedWord[msg](${message}, ${spotifyId}, ${groupId})`)
+                console.log(error)
             } else {
-                console.error(`DatabasePool::logBannedWord(${word}, ${spotifyId}, ${groupId}) - SUCCESS`)
+                console.log(`DatabasePool::logBannedWord[msg](${message}, ${spotifyId}, ${groupId}) - SUCCESS`)
+                console.log(data.insertId)
+                id = data.insertId
+
+                sql = "INSERT INTO bannedWordsUse (banUsgWordID, banUsgSenderID, banUsgGroupID, banUsgMsgID) " + 
+                "VALUES ((SELECT wordID FROM bannedWords WHERE word=?), ?, ?, ?)"
+                query = mysql.format(sql, [word, spotifyId, groupId, id])
+                this.pool.query(query, (error, response) => {
+                    if (error) {
+                        console.error(`DatabasePool::logBannedWord(${word}, ${spotifyId}, ${groupId}, ${id})`)
+                        console.error(error)
+                    } else {
+                        console.error(`DatabasePool::logBannedWord(${word}, ${spotifyId}, ${groupId}, ${id}) - SUCCESS`)
+                    }
+                })
             }
         })
 
@@ -91,14 +106,18 @@ class DatabasePool {
     logMessage(message, spotifyId, groupId) {
         let sql = "INSERT INTO messages (msgSenderID, msgContent, msgGroupID) VALUES (?,?,?)"
         let query = mysql.format(sql, [spotifyId, message, groupId])
+        let id = "poop"
         this.pool.query(query, (error, data) => {
             if (error) {
                 console.log(`DatabasePool::logMessage(${message}, ${spotifyId}, ${groupId})`)
                 console.log(error)
             } else {
                 console.log(`DatabasePool::logMessage(${message}, ${spotifyId}, ${groupId}) - SUCCESS`)
+                console.log(data.insertId)
+                id = data.insertId
             }
         })
+        return id
     }
 }
 

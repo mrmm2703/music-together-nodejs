@@ -121,9 +121,11 @@ io.on("connection", (socket) => {
         if (banned) {
             // Tell client message was banned
             io.to(socket.id).emit("messageBanned", word)
-            // Log banned word usage in database
-            db.logBannedWord(word, socket.spotifyId, socket.group)
+            // Log banned word usage and message in database
+            db.logBannedWord(word, socket.spotifyId, socket.group, data)
         } else {
+            // Log the message in database
+            db.logMessage(data, socket.spotifyId, socket.group)
             // Send to all clients new message
             io.to(socket.group).emit("newMessage", {
                 id: socket.spotifyId,
@@ -131,8 +133,6 @@ io.on("connection", (socket) => {
             })
         }
 
-        // Log the message in database
-        db.logMessage(data, socket.spotifyId, socket.group)
     })
 
     // When a user is typing
