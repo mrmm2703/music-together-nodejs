@@ -40,6 +40,7 @@ server.listen(3000)
 //             "track1_id": 7,
 //             "track2_id": 4
 //         }
+//         "host": "hostSpotifyId"
 //     }
 // }
 
@@ -57,7 +58,7 @@ io.on("connection", (socket) => {
         socket.join(data.group)
         // Check if group exists
         if (!groups.hasOwnProperty(socket.group)) {
-            groups[socket.group] = {users: {}, likes: {}}
+            groups[socket.group] = {users: {}, likes: {}, host: socket.spotifyId}
         }
         // Add user to groups object
         groups[socket.group]["users"][socket.spotifyId] = {
@@ -137,7 +138,33 @@ io.on("connection", (socket) => {
 
     // When a user is typing
     socket.on("typing", () => {
-        io.to(socket.group).emit("typing", socket.spotifyId)
+        socket.to(socket.group).emit("typing", socket.spotifyId)
+    })
+
+    // PLAYBACK CONTROLS
+    socket.on("pause", () => {
+        socket.to(socket.group).emit("pause")
+    })
+    
+    socket.on("resume", () => {
+        socket.to(socket.group).emit("resume")
+    })
+
+    socket.on("changeSong", (songDetails) => {
+        if (groups[socket.group]["host"] == socket.spotifyId) {
+            socket.to(socket.group).emit("changeSong", {
+                uri: songDetails.uri,
+                context: songDetails.context
+            })
+        }
+    })
+
+    socket.on("addToQueue", (songDetails) => {
+        socket.to(socket.group).emit(songDetails)
+    })
+
+    socket.on("makeMeHost", () => {
+        groups[socket.group]["host"] = socket.spotifyId
     })
 })
 
