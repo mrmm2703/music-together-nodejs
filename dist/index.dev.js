@@ -91,7 +91,8 @@ io.on("connection", function (socket) {
     io.to(data.socketId).emit("weAreHere", {
       context: data.context,
       uri: data.uri,
-      position: data.position
+      position: data.position,
+      paused: data.paused
     });
   });
   socket.on("whereAreWe", function () {
@@ -155,22 +156,24 @@ io.on("connection", function (socket) {
   }); // PLAYBACK CONTROLS
 
   socket.on("pause", function () {
-    socket.to(socket.group).emit("pause");
+    socket.to(socket.group).emit("pause", socket.spotifyId);
   });
   socket.on("resume", function () {
-    socket.to(socket.group).emit("resume");
+    socket.to(socket.group).emit("resume", socket.spotifyId);
   });
   socket.on("changeSong", function (songDetails) {
     if (groups[socket.group]["host"] == socket.spotifyId) {
       socket.to(socket.group).emit("changeSong", {
         uri: songDetails.uri,
         context: songDetails.context,
-        paused: songDetails.paused
+        paused: songDetails.paused,
+        name: songDetails.name,
+        id: socket.spotifyId
       });
     }
   });
   socket.on("addToQueue", function (songDetails) {
-    socket.to(socket.group).emit(songDetails);
+    socket.to(socket.group).emit("addToQueue", songDetails);
   });
   socket.on("makeMeHost", function () {
     groups[socket.group]["host"] = socket.spotifyId;

@@ -97,7 +97,8 @@ io.on("connection", (socket) => {
         io.to(data.socketId).emit("weAreHere", {
             context: data.context,
             uri: data.uri,
-            position: data.position
+            position: data.position,
+            paused: data.paused
         })
     })
 
@@ -169,11 +170,11 @@ io.on("connection", (socket) => {
 
     // PLAYBACK CONTROLS
     socket.on("pause", () => {
-        socket.to(socket.group).emit("pause")
+        socket.to(socket.group).emit("pause", socket.spotifyId)
     })
     
     socket.on("resume", () => {
-        socket.to(socket.group).emit("resume")
+        socket.to(socket.group).emit("resume", socket.spotifyId)
     })
 
     socket.on("changeSong", (songDetails) => {
@@ -181,13 +182,15 @@ io.on("connection", (socket) => {
             socket.to(socket.group).emit("changeSong", {
                 uri: songDetails.uri,
                 context: songDetails.context,
-                paused: songDetails.paused
+                paused: songDetails.paused,
+                name: songDetails.name,
+                id: socket.spotifyId
             })
         }
     })
 
     socket.on("addToQueue", (songDetails) => {
-        socket.to(socket.group).emit(songDetails)
+        socket.to(socket.group).emit("addToQueue", songDetails)
     })
 
     socket.on("makeMeHost", () => {
