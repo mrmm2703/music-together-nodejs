@@ -40,8 +40,9 @@ server.listen(3000); // var groups = {
 //         "likes": {
 //             "track1_id": 7,
 //             "track2_id": 4
-//         }
-//         "host": "hostSpotifyId"
+//         },
+//         "host": "hostSpotifyId",
+//         "hostSocket": "hostSocketId"
 //     }
 // }
 
@@ -60,14 +61,16 @@ io.on("connection", function (socket) {
       groups[socket.group] = {
         users: {},
         likes: {},
-        host: socket.spotifyId
+        host: socket.spotifyId,
+        hostSocket: socket.id
       };
     } // Add user to groups object
 
 
     groups[socket.group]["users"][socket.spotifyId] = {
       "prof_pic": data.prof_pic,
-      "name": data.name
+      "name": data.name,
+      "socket": socket.id
     }; // Send back a response to new user
 
     io.to(socket.id).emit("usersInGroup", groups[socket.group]); // Tell all other users new user is here
@@ -82,6 +85,17 @@ io.on("connection", function (socket) {
 
     db.updateUserGroupId(socket.spotifyId, socket.group);
     console.log(groups);
+  }); // When a weAreHere message is received from the host
+
+  socket.on("weAreHere", function (data) {
+    io.to(data.socketId).emit("weAreHere", {
+      context: data.context,
+      uri: data.uri,
+      position: data.position
+    });
+  });
+  socket.on("whereAreWe", function () {
+    io.to(groups[socket.group]["hostSocket"]).emit("whereAreWe", socket.id);
   }); // When user leaves a group session
 
   socket.on("disconnect", function () {
@@ -94,6 +108,12 @@ io.on("connection", function (socket) {
 
     if (Object.keys(groups[socket.group]["users"]).length == 0) {
       delete groups[socket.group];
+    } else {
+      if (groups[socket.group]["host"] == socket.spotifyId) {
+        // Assign a new host
+        groups[socket.group]["host"] = Object.keys(groups[socket.group]["users"])[0];
+        groups[socket.group]["hostSocket"] = groups[socket.group]["users"][groups[socket.group]["host"]]["socket"];
+      }
     } // Update users table with group ID
 
 
@@ -144,7 +164,8 @@ io.on("connection", function (socket) {
     if (groups[socket.group]["host"] == socket.spotifyId) {
       socket.to(socket.group).emit("changeSong", {
         uri: songDetails.uri,
-        context: songDetails.context
+        context: songDetails.context,
+        paused: songDetails.paused
       });
     }
   });
@@ -153,5 +174,6 @@ io.on("connection", function (socket) {
   });
   socket.on("makeMeHost", function () {
     groups[socket.group]["host"] = socket.spotifyId;
+    groups[socket.group]["hostSocket"] = socket.id;
   });
 });

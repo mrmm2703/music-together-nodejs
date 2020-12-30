@@ -39,8 +39,9 @@ server.listen(3000)
 //         "likes": {
 //             "track1_id": 7,
 //             "track2_id": 4
-//         }
-//         "host": "hostSpotifyId"
+//         },
+//         "host": "hostSpotifyId",
+//         "hostSocket": "hostSocketId"
 //     }
 // }
 
@@ -58,12 +59,18 @@ io.on("connection", (socket) => {
         socket.join(data.group)
         // Check if group exists
         if (!groups.hasOwnProperty(socket.group)) {
-            groups[socket.group] = {users: {}, likes: {}, host: socket.spotifyId}
+            groups[socket.group] = {
+                users: {},
+                likes: {},
+                host: socket.spotifyId,
+                hostSocket: socket.id
+            }
         }
         // Add user to groups object
         groups[socket.group]["users"][socket.spotifyId] = {
             "prof_pic": data.prof_pic,
             "name": data.name,
+            "socket": socket.id
         }
 
         // Send back a response to new user
@@ -85,6 +92,19 @@ io.on("connection", (socket) => {
         console.log(groups)
     })
 
+    // When a weAreHere message is received from the host
+    socket.on("weAreHere", (data) => {
+        io.to(data.socketId).emit("weAreHere", {
+            context: data.context,
+            uri: data.uri,
+            position: data.position
+        })
+    })
+
+    socket.on("whereAreWe", () => {
+        io.to(groups[socket.group]["hostSocket"]).emit("whereAreWe", socket.id)
+    })
+
     // When user leaves a group session
     socket.on("disconnect", () => {
         // Add an EXIT group log
@@ -99,6 +119,12 @@ io.on("connection", (socket) => {
         // Remove group if empty
         if (Object.keys(groups[socket.group]["users"]).length == 0) {
             delete groups[socket.group]
+        } else {
+            if (groups[socket.group]["host"] == socket.spotifyId) {
+                // Assign a new host
+                groups[socket.group]["host"] = Object.keys(groups[socket.group]["users"])[0]
+                groups[socket.group]["hostSocket"] = groups[socket.group]["users"][groups[socket.group]["host"]]["socket"]   
+            }
         }
 
         // Update users table with group ID
@@ -154,7 +180,8 @@ io.on("connection", (socket) => {
         if (groups[socket.group]["host"] == socket.spotifyId) {
             socket.to(socket.group).emit("changeSong", {
                 uri: songDetails.uri,
-                context: songDetails.context
+                context: songDetails.context,
+                paused: songDetails.paused
             })
         }
     })
@@ -165,7 +192,6 @@ io.on("connection", (socket) => {
 
     socket.on("makeMeHost", () => {
         groups[socket.group]["host"] = socket.spotifyId
+        groups[socket.group]["hostSocket"] = socket.id
     })
 })
-
-
