@@ -189,8 +189,14 @@ io.on("connection", (socket) => {
         }
     })
 
-    socket.on("addToQueue", (songDetails) => {
-        socket.to(socket.group).emit("addToQueue", songDetails)
+    socket.on("addToQueue", (data) => {
+        socket.to(socket.group).emit("addToQueue", {
+            uri: data.uri,
+            name: data.name,
+            artist: data.artist,
+            image: data.image,
+            id: socket.spotifyId
+        })
     })
 
     socket.on("makeMeHost", () => {

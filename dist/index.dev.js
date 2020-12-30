@@ -172,8 +172,14 @@ io.on("connection", function (socket) {
       });
     }
   });
-  socket.on("addToQueue", function (songDetails) {
-    socket.to(socket.group).emit("addToQueue", songDetails);
+  socket.on("addToQueue", function (data) {
+    socket.to(socket.group).emit("addToQueue", {
+      uri: data.uri,
+      name: data.name,
+      artist: data.artist,
+      image: data.image,
+      id: socket.spotifyId
+    });
   });
   socket.on("makeMeHost", function () {
     groups[socket.group]["host"] = socket.spotifyId;
