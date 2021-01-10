@@ -61,6 +61,7 @@ io.on("connection", function (socket) {
       groups[socket.group] = {
         users: {},
         likes: {},
+        queue: [],
         host: socket.spotifyId,
         hostSocket: socket.id
       };
@@ -92,7 +93,8 @@ io.on("connection", function (socket) {
       context: data.context,
       uri: data.uri,
       position: data.position,
-      paused: data.paused
+      paused: data.paused,
+      queue: groups[socket.group]["queue"]
     });
   });
   socket.on("whereAreWe", function () {
@@ -170,6 +172,12 @@ io.on("connection", function (socket) {
         name: songDetails.name,
         id: socket.spotifyId
       });
+
+      if (groups[socket.group]["queue"].includes(songDetails.uri)) {
+        groups[socket.group]["queue"].splice(groups[socket.group]["queue"].indexOf(songDetails.uri), 1);
+      }
+
+      console.log(groups[socket.group]["queue"]);
     }
   });
   socket.on("addToQueue", function (data) {
@@ -180,6 +188,8 @@ io.on("connection", function (socket) {
       image: data.image,
       id: socket.spotifyId
     });
+    groups[socket.group].queue.push(data.uri);
+    console.log(groups[socket.group]["queue"]);
   });
   socket.on("makeMeHost", function () {
     groups[socket.group]["host"] = socket.spotifyId;
