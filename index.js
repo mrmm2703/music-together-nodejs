@@ -50,7 +50,12 @@ var groups = {}
 // When a new connection is established
 io.on("connection", (socket) => {
     console.log("New connection.")
-    console.log(banned_words)
+
+    // When admin changes banned words
+    socket.on("refreshBannedWords", () => {
+        banned_words = db.getBannedWords()
+        console.log("Refreshing banned words...")
+    })
     
     // When user joins for the first time
     socket.on("joinedGroup", (data) => {
@@ -110,29 +115,31 @@ io.on("connection", (socket) => {
 
     // When user leaves a group session
     socket.on("disconnect", () => {
-        // Add an EXIT group log
-        db.insertGroupLog(socket.spotifyId, socket.group, "EXIT")
+        if (typeof socket.spotifyId != "undefined") {
+            // Add an EXIT group log
+            db.insertGroupLog(socket.spotifyId, socket.group, "EXIT")
 
-        // Tell other users that the user has disconnected
-        io.to(socket.group).emit("userLeft", socket.spotifyId)
+            // Tell other users that the user has disconnected
+            io.to(socket.group).emit("userLeft", socket.spotifyId)
 
-        // Remove the user from the groups object
-        delete groups[socket.group]["users"][socket.spotifyId]
+            // Remove the user from the groups object
+            delete groups[socket.group]["users"][socket.spotifyId]
 
-        // Remove group if empty
-        if (Object.keys(groups[socket.group]["users"]).length == 0) {
-            delete groups[socket.group]
-        } else {
-            if (groups[socket.group]["host"] == socket.spotifyId) {
-                // Assign a new host
-                groups[socket.group]["host"] = Object.keys(groups[socket.group]["users"])[0]
-                groups[socket.group]["hostSocket"] = groups[socket.group]["users"][groups[socket.group]["host"]]["socket"]   
+            // Remove group if empty
+            if (Object.keys(groups[socket.group]["users"]).length == 0) {
+                delete groups[socket.group]
+            } else {
+                if (groups[socket.group]["host"] == socket.spotifyId) {
+                    // Assign a new host
+                    groups[socket.group]["host"] = Object.keys(groups[socket.group]["users"])[0]
+                    groups[socket.group]["hostSocket"] = groups[socket.group]["users"][groups[socket.group]["host"]]["socket"]   
+                }
             }
-        }
 
-        // Update users table with group ID
-        db.updateUserGroupId(socket.spotifyId, null)
-        console.log(groups)
+            // Update users table with group ID
+            db.updateUserGroupId(socket.spotifyId, null)
+            console.log(groups)
+        }
     })
 
     // When a message is received
