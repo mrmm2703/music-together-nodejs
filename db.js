@@ -119,6 +119,26 @@ class DatabasePool {
         })
         return id
     }
+
+    // Validation admin access token
+    checkAccessToken(accessToken, callback) {
+        let sql = "SELECT COUNT(adminID) AS 'count' FROM adminUsers WHERE adminToken=?"
+        let query = mysql.format(sql, [accessToken])
+        this.pool.query(query, (error, data) => {
+            if (error) {
+                console.log(`DatabasePool::checkAccessToken(${accessToken})`)
+                console.log(error)
+                callback(false)
+            } else {
+                console.log(`DatabasePool::checkAccessToken(${accessToken})`)
+                if (data.length == 1) {
+                    callback(true)
+                } else {
+                    callback(false)
+                }
+            }
+        })
+    }
 }
 
 module.exports = DatabasePool

@@ -1,5 +1,13 @@
 "use strict";
 
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+
+function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
 // Import needed modules
 var fs = require("fs");
 
@@ -161,14 +169,16 @@ io.on("connection", function (socket) {
 
   socket.on("typing", function () {
     socket.to(socket.group).emit("typing", socket.spotifyId);
-  }); // PLAYBACK CONTROLS
+  }); // PLAYBACK STATE CONTROLS
 
   socket.on("pause", function () {
+    z;
     socket.to(socket.group).emit("pause", socket.spotifyId);
   });
   socket.on("resume", function () {
     socket.to(socket.group).emit("resume", socket.spotifyId);
-  });
+  }); // SONG CONTROL
+
   socket.on("changeSong", function (songDetails) {
     if (groups[socket.group]["host"] == socket.spotifyId) {
       socket.to(socket.group).emit("changeSong", {
@@ -200,5 +210,41 @@ io.on("connection", function (socket) {
   socket.on("makeMeHost", function () {
     groups[socket.group]["host"] = socket.spotifyId;
     groups[socket.group]["hostSocket"] = socket.id;
+  }); // USER BAN
+
+  socket.on("banUser", function (data) {
+    console.log("RECEIEVED");
+
+    if (data.accessToken != null) {
+      console.log("NON NULL");
+      db.checkAccessToken(data.accessToken, function (res) {
+        if (res) {
+          for (var _i = 0, _Object$entries = Object.entries(groups); _i < _Object$entries.length; _i++) {
+            var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
+                key = _Object$entries$_i[0],
+                value = _Object$entries$_i[1];
+
+            console.log("GROUP");
+            console.log(key);
+            console.log(value);
+
+            for (var _i2 = 0, _Object$entries2 = Object.entries(value["users"]); _i2 < _Object$entries2.length; _i2++) {
+              var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
+                  user_id = _Object$entries2$_i[0],
+                  user_details = _Object$entries2$_i[1];
+
+              console.log("USER");
+              console.log(user_id);
+              console.log(user_details);
+
+              if (user_id == data.id) {
+                console.log("MATCH");
+                io.to(user_details["socket"]).emit("userBanned");
+              }
+            }
+          }
+        }
+      });
+    }
   });
 });

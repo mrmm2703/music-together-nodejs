@@ -177,8 +177,8 @@ io.on("connection", (socket) => {
         socket.to(socket.group).emit("typing", socket.spotifyId)
     })
 
-    // PLAYBACK CONTROLS
-    socket.on("pause", () => {
+    // PLAYBACK STATE CONTROLS
+    socket.on("pause", () => {z
         socket.to(socket.group).emit("pause", socket.spotifyId)
     })
     
@@ -186,6 +186,7 @@ io.on("connection", (socket) => {
         socket.to(socket.group).emit("resume", socket.spotifyId)
     })
 
+    // SONG CONTROL
     socket.on("changeSong", (songDetails) => {
         if (groups[socket.group]["host"] == socket.spotifyId) {
             socket.to(socket.group).emit("changeSong", {
@@ -217,5 +218,31 @@ io.on("connection", (socket) => {
     socket.on("makeMeHost", () => {
         groups[socket.group]["host"] = socket.spotifyId
         groups[socket.group]["hostSocket"] = socket.id
+    })
+
+    // USER BAN
+    socket.on("banUser", (data) => {
+        console.log("RECEIEVED")
+        if (data.accessToken != null) {
+            console.log("NON NULL")
+            db.checkAccessToken(data.accessToken, function(res) {
+                if (res) {
+                    for (const [key, value] of Object.entries(groups)) {
+                        console.log("GROUP")
+                        console.log(key)
+                        console.log(value)
+                        for (const [user_id, user_details] of Object.entries(value["users"])) {
+                            console.log("USER")
+                            console.log(user_id)
+                            console.log(user_details)
+                            if (user_id == data.id) {
+                                console.log("MATCH")
+                                io.to(user_details["socket"]).emit("userBanned")
+                            }
+                        }
+                    }
+                }
+            })
+        }
     })
 })

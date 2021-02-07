@@ -138,6 +138,28 @@ function () {
         }
       });
       return id;
+    } // Validation admin access token
+
+  }, {
+    key: "checkAccessToken",
+    value: function checkAccessToken(accessToken, callback) {
+      var sql = "SELECT COUNT(adminID) AS 'count' FROM adminUsers WHERE adminToken=?";
+      var query = mysql.format(sql, [accessToken]);
+      this.pool.query(query, function (error, data) {
+        if (error) {
+          console.log("DatabasePool::checkAccessToken(".concat(accessToken, ")"));
+          console.log(error);
+          callback(false);
+        } else {
+          console.log("DatabasePool::checkAccessToken(".concat(accessToken, ")"));
+
+          if (data.length == 1) {
+            callback(true);
+          } else {
+            callback(false);
+          }
+        }
+      });
     }
   }]);
 
