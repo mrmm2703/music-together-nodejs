@@ -178,7 +178,7 @@ io.on("connection", (socket) => {
     })
 
     // PLAYBACK STATE CONTROLS
-    socket.on("pause", () => {z
+    socket.on("pause", () => {
         socket.to(socket.group).emit("pause", socket.spotifyId)
     })
     
