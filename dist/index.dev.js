@@ -75,7 +75,8 @@ io.on("connection", function (socket) {
         likes: {},
         queue: [],
         host: socket.spotifyId,
-        hostSocket: socket.id
+        hostSocket: socket.id,
+        collabId: null
       };
     } // Add user to groups object
 
@@ -92,7 +93,13 @@ io.on("connection", function (socket) {
       id: socket.spotifyId,
       prof_pic: groups[socket.group]["users"][socket.spotifyId]["prof_pic"],
       name: groups[socket.group]["users"][socket.spotifyId]["name"]
-    }); // Add an ENTER group log
+    }); // Send collab playlist to new user if collab exists
+
+    if (groups[socket.group]["collabId"] != null) {
+      io.to(socket.id).emit("followPlaylist", groups[socket.group]["collabId"]);
+      io.to(socket.id).emit("updatePlaylist", groups[socket.group]["collabId"]);
+    } // Add an ENTER group log
+
 
     db.insertGroupLog(socket.spotifyId, socket.group, "ENTER"); // Update users table with group ID
 
@@ -172,7 +179,6 @@ io.on("connection", function (socket) {
   }); // PLAYBACK STATE CONTROLS
 
   socket.on("pause", function () {
-    z;
     socket.to(socket.group).emit("pause", socket.spotifyId);
   });
   socket.on("resume", function () {
@@ -213,32 +219,23 @@ io.on("connection", function (socket) {
   }); // USER BAN
 
   socket.on("banUser", function (data) {
-    console.log("RECEIEVED");
-
+    // Check for access token
     if (data.accessToken != null) {
-      console.log("NON NULL");
+      // Check if access token is valid
       db.checkAccessToken(data.accessToken, function (res) {
         if (res) {
+          // Find the socket ID of the user by Spotify ID
           for (var _i = 0, _Object$entries = Object.entries(groups); _i < _Object$entries.length; _i++) {
             var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
                 key = _Object$entries$_i[0],
                 value = _Object$entries$_i[1];
-
-            console.log("GROUP");
-            console.log(key);
-            console.log(value);
 
             for (var _i2 = 0, _Object$entries2 = Object.entries(value["users"]); _i2 < _Object$entries2.length; _i2++) {
               var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
                   user_id = _Object$entries2$_i[0],
                   user_details = _Object$entries2$_i[1];
 
-              console.log("USER");
-              console.log(user_id);
-              console.log(user_details);
-
               if (user_id == data.id) {
-                console.log("MATCH");
                 io.to(user_details["socket"]).emit("userBanned");
               }
             }
@@ -246,5 +243,29 @@ io.on("connection", function (socket) {
         }
       });
     }
+  }); // COLLABORATIVE PLAYLIST
+
+  socket.on("doesCollabExist", function (songId) {
+    if (groups[socket.group]["collabId"] == null) {
+      io.to(socket.id).emit("noCollabPlaylist", songId);
+    } else {
+      io.to(socket.id).emit("collabUri", {
+        songId: songId,
+        collabUri: groups[socket.group]["collabId"]
+      });
+    }
+  });
+  socket.on("newPlaylist", function (data) {
+    groups[socket.group]["collabId"] = data.collabUri; // Broadcast to rest of group the new playlist
+
+    socket.to(socket.group).emit("followPlaylist", data.collabUri); // Tell client to add to playlist
+
+    io.to(socket.id).emit("collabUri", {
+      songId: data.songId,
+      collabUri: groups[socket.group]["collabId"]
+    });
+  });
+  socket.on("newPlaylistItem", function () {
+    socket.to(socket.group).emit("updatePlaylist", groups[socket.group]["collabId"]);
   });
 });

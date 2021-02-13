@@ -69,7 +69,8 @@ io.on("connection", (socket) => {
                 likes: {},
                 queue: [],
                 host: socket.spotifyId,
-                hostSocket: socket.id
+                hostSocket: socket.id,
+                collabId: null
             }
         }
         // Add user to groups object
@@ -88,6 +89,12 @@ io.on("connection", (socket) => {
             prof_pic: groups[socket.group]["users"][socket.spotifyId]["prof_pic"],
             name: groups[socket.group]["users"][socket.spotifyId]["name"]
         })
+
+        // Send collab playlist to new user if collab exists
+        if (groups[socket.group]["collabId"] != null) {
+            io.to(socket.id).emit("followPlaylist", groups[socket.group]["collabId"])
+            io.to(socket.id).emit("updatePlaylist", groups[socket.group]["collabId"])
+        }
 
         // Add an ENTER group log
         db.insertGroupLog(socket.spotifyId, socket.group, "ENTER")
@@ -222,21 +229,15 @@ io.on("connection", (socket) => {
 
     // USER BAN
     socket.on("banUser", (data) => {
-        console.log("RECEIEVED")
+        // Check for access token
         if (data.accessToken != null) {
-            console.log("NON NULL")
+            // Check if access token is valid
             db.checkAccessToken(data.accessToken, function(res) {
                 if (res) {
+                    // Find the socket ID of the user by Spotify ID
                     for (const [key, value] of Object.entries(groups)) {
-                        console.log("GROUP")
-                        console.log(key)
-                        console.log(value)
                         for (const [user_id, user_details] of Object.entries(value["users"])) {
-                            console.log("USER")
-                            console.log(user_id)
-                            console.log(user_details)
                             if (user_id == data.id) {
-                                console.log("MATCH")
                                 io.to(user_details["socket"]).emit("userBanned")
                             }
                         }
@@ -244,5 +245,32 @@ io.on("connection", (socket) => {
                 }
             })
         }
+    })
+
+    // COLLABORATIVE PLAYLIST
+    socket.on("doesCollabExist", (songId) => {
+        if (groups[socket.group]["collabId"] == null) {
+            io.to(socket.id).emit("noCollabPlaylist", songId)
+        } else {
+            io.to(socket.id).emit("collabUri", {
+                songId: songId,
+                collabUri: groups[socket.group]["collabId"]
+            })
+        }
+    })
+
+    socket.on("newPlaylist", (data) => {
+        groups[socket.group]["collabId"] = data.collabUri
+        // Broadcast to rest of group the new playlist
+        socket.to(socket.group).emit("followPlaylist", data.collabUri)
+        // Tell client to add to playlist
+        io.to(socket.id).emit("collabUri", {
+            songId: data.songId,
+            collabUri: groups[socket.group]["collabId"]
+        })
+    })
+
+    socket.on("newPlaylistItem", () => {
+        socket.to(socket.group).emit("updatePlaylist", groups[socket.group]["collabId"])
     })
 })
