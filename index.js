@@ -112,7 +112,8 @@ io.on("connection", (socket) => {
             uri: data.uri,
             position: data.position,
             paused: data.paused,
-            queue: groups[socket.group]["queue"]
+            queue: groups[socket.group]["queue"],
+            duration: data.duration
         })
     })
 
@@ -191,6 +192,13 @@ io.on("connection", (socket) => {
     
     socket.on("resume", () => {
         socket.to(socket.group).emit("resume", socket.spotifyId)
+    })
+
+    socket.on("seek", (pos) => {
+        socket.to(socket.group).emit("seek", {
+            id: socket.spotifyId,
+            pos: pos
+        })
     })
 
     // SONG CONTROL
@@ -272,5 +280,22 @@ io.on("connection", (socket) => {
 
     socket.on("newPlaylistItem", () => {
         socket.to(socket.group).emit("updatePlaylist", groups[socket.group]["collabId"])
+    })
+
+    // SETTINGS CHANGES
+    socket.on("changeName", (newName) => {
+        groups[socket.group]["users"][socket.spotifyId]["name"] = newName
+        io.to(socket.group).emit("updateName", {
+            id: socket.spotifyId,
+            name: newName
+        })
+    })
+
+    socket.on("changeProfPic", (newProfPic) => {
+        groups[socket.group]["users"][socket.spotifyId]["prof_pic"] = newProfPic
+        io.to(socket.group).emit("updateProfPic", {
+            id: socket.spotifyId,
+            profPic: newProfPic
+        })
     })
 })

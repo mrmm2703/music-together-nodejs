@@ -113,7 +113,8 @@ io.on("connection", function (socket) {
       uri: data.uri,
       position: data.position,
       paused: data.paused,
-      queue: groups[socket.group]["queue"]
+      queue: groups[socket.group]["queue"],
+      duration: data.duration
     });
   });
   socket.on("whereAreWe", function () {
@@ -183,6 +184,12 @@ io.on("connection", function (socket) {
   });
   socket.on("resume", function () {
     socket.to(socket.group).emit("resume", socket.spotifyId);
+  });
+  socket.on("seek", function (pos) {
+    socket.to(socket.group).emit("seek", {
+      id: socket.spotifyId,
+      pos: pos
+    });
   }); // SONG CONTROL
 
   socket.on("changeSong", function (songDetails) {
@@ -267,5 +274,20 @@ io.on("connection", function (socket) {
   });
   socket.on("newPlaylistItem", function () {
     socket.to(socket.group).emit("updatePlaylist", groups[socket.group]["collabId"]);
+  }); // SETTINGS CHANGES
+
+  socket.on("changeName", function (newName) {
+    groups[socket.group]["users"][socket.spotifyId]["name"] = newName;
+    io.to(socket.group).emit("updateName", {
+      id: socket.spotifyId,
+      name: newName
+    });
+  });
+  socket.on("changeProfPic", function (newProfPic) {
+    groups[socket.group]["users"][socket.spotifyId]["prof_pic"] = newProfPic;
+    io.to(socket.group).emit("updateProfPic", {
+      id: socket.spotifyId,
+      profPic: newProfPic
+    });
   });
 });
