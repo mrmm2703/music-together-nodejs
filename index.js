@@ -3,6 +3,7 @@ const fs = require("fs")
 const https = require("https")
 const mysql = require("mysql")
 const DatabasePool = require("./db")
+const SpotifyConnection = require("./spotify")
 
 // Create a DatabasePool object
 var db = new DatabasePool()
@@ -23,6 +24,8 @@ const io = require("socket.io")(server, {
     }
 })
 server.listen(3000)
+
+var spotify = new SpotifyConnection()
 
 // var groups = {
 //     "4729": {
@@ -47,9 +50,32 @@ server.listen(3000)
 
 var groups = {}
 
+spotify.on("follow_playlist", (data) => {
+    console.log(data)
+    groups[data.groupId]["collabId"] = data.playlistId
+    io.to(data.groupId).emit("followPlaylist", data.playlistId)
+})
+
+spotify.on("playlist", (data) => {
+    io.to(data.groupId).emit("updatePlaylist", data.playlistId)
+})
+
+
+function getDate() {
+    let d = new Date()
+    return d.getDate() + "/" + (d.getMonth() + 1) + "/" + d.getFullYear()
+}
+
 // When a new connection is established
 io.on("connection", (socket) => {
     console.log("New connection.")
+
+    socket.on("auth_code", (code) => {
+        spotify.activateAuthCode(code).then(function(d) {
+            spotify.setToken(d)
+            spotify.startRefreshSequence()
+        })
+    })
 
     // When admin changes banned words
     socket.on("refreshBannedWords", () => {
@@ -256,14 +282,20 @@ io.on("connection", (socket) => {
     })
 
     // COLLABORATIVE PLAYLIST
-    socket.on("doesCollabExist", (songId) => {
+    socket.on("addToPlaylist", (songUri) => {
+        console.log("songUri:")
+        console.log(songUri)
         if (groups[socket.group]["collabId"] == null) {
-            io.to(socket.id).emit("noCollabPlaylist", songId)
+            spotify.addToQueue("create_playlist", {
+                name: "Collab (" + socket.group + ")",
+                description: "Music Together session on " + getDate() + ". Group ID: " + socket.group,
+                songUri: "spotify:track:" + songUri
+            }, socket.group)
         } else {
-            io.to(socket.id).emit("collabUri", {
-                songId: songId,
-                collabUri: groups[socket.group]["collabId"]
-            })
+            spotify.addToQueue("add_to_playlist", {
+                playlistId: groups[socket.group]["collabId"],
+                songId: "spotify:track:" + songUri
+            }, socket.group)
         }
     })
 

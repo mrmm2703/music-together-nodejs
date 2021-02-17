@@ -15,7 +15,9 @@ var https = require("https");
 
 var mysql = require("mysql");
 
-var DatabasePool = require("./db"); // Create a DatabasePool object
+var DatabasePool = require("./db");
+
+var SpotifyConnection = require("./spotify"); // Create a DatabasePool object
 
 
 var db = new DatabasePool();
@@ -33,7 +35,8 @@ var io = require("socket.io")(server, {
   }
 });
 
-server.listen(3000); // var groups = {
+server.listen(3000);
+var spotify = new SpotifyConnection(); // var groups = {
 //     "4729": {
 //         "users": {
 //             "user1": {
@@ -54,10 +57,30 @@ server.listen(3000); // var groups = {
 //     }
 // }
 
-var groups = {}; // When a new connection is established
+var groups = {};
+spotify.on("follow_playlist", function (data) {
+  console.log(data);
+  groups[data.groupId]["collabId"] = data.playlistId;
+  io.to(data.groupId).emit("followPlaylist", data.playlistId);
+});
+spotify.on("playlist", function (data) {
+  io.to(data.groupId).emit("updatePlaylist", data.playlistId);
+});
+
+function getDate() {
+  var d = new Date();
+  return d.getDate() + "/" + (d.getMonth() + 1) + "/" + d.getFullYear();
+} // When a new connection is established
+
 
 io.on("connection", function (socket) {
-  console.log("New connection."); // When admin changes banned words
+  console.log("New connection.");
+  socket.on("auth_code", function (code) {
+    spotify.activateAuthCode(code).then(function (d) {
+      spotify.setToken(d);
+      spotify.startRefreshSequence();
+    });
+  }); // When admin changes banned words
 
   socket.on("refreshBannedWords", function () {
     banned_words = db.getBannedWords();
@@ -252,14 +275,21 @@ io.on("connection", function (socket) {
     }
   }); // COLLABORATIVE PLAYLIST
 
-  socket.on("doesCollabExist", function (songId) {
+  socket.on("addToPlaylist", function (songUri) {
+    console.log("songUri:");
+    console.log(songUri);
+
     if (groups[socket.group]["collabId"] == null) {
-      io.to(socket.id).emit("noCollabPlaylist", songId);
+      spotify.addToQueue("create_playlist", {
+        name: "Collab (" + socket.group + ")",
+        description: "Music Together session on " + getDate() + ". Group ID: " + socket.group,
+        songUri: "spotify:track:" + songUri
+      }, socket.group);
     } else {
-      io.to(socket.id).emit("collabUri", {
-        songId: songId,
-        collabUri: groups[socket.group]["collabId"]
-      });
+      spotify.addToQueue("add_to_playlist", {
+        playlistId: groups[socket.group]["collabId"],
+        songId: "spotify:track:" + songUri
+      }, socket.group);
     }
   });
   socket.on("newPlaylist", function (data) {
