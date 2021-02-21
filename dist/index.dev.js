@@ -36,27 +36,30 @@ var io = require("socket.io")(server, {
 });
 
 server.listen(3000);
-var spotify = new SpotifyConnection(); // var groups = {
-//     "4729": {
-//         "users": {
-//             "user1": {
-//                 "prof_pic": "profPic.png",
-//                 "name": "Muhammad"
-//             },
-//             "user2": {
-//                 "prof_pic": "profPic.png",
-//                 "name": "Momo"
-//             }
-//         },
-//         "likes": {
-//             "track1_id": 7,
-//             "track2_id": 4
-//         },
-//         "host": "hostSpotifyId",
-//         "hostSocket": "hostSocketId"
-//     }
-// }
-
+var spotify = new SpotifyConnection();
+var groups = {// "4729": {
+  //     "users": {
+  //         "user1": {
+  //             "prof_pic": "profPic.png",
+  //             "name": "Muhammad"
+  //         },
+  //         "user2": {
+  //             "prof_pic": "profPic.png",
+  //             "name": "Momo"
+  //         }
+  //     },
+  //     "likes": {
+  //         "track1_id": [
+  //             "user1_id", "user2_id"
+  //         ],
+  //         "track2_id": [
+  //             "user3_id", "user1_id"
+  //         ]
+  //     },
+  //     "host": "hostSpotifyId",
+  //     "hostSocket": "hostSocketId"
+  // }
+};
 var groups = {};
 spotify.on("follow_playlist", function (data) {
   console.log(data);
@@ -318,6 +321,33 @@ io.on("connection", function (socket) {
     io.to(socket.group).emit("updateProfPic", {
       id: socket.spotifyId,
       profPic: newProfPic
+    });
+  }); // SONG LIKING SYSTEM
+
+  socket.on("likeSong", function (songId) {
+    // Check if song exists
+    if (groups[socket.group]["likes"][songId] == undefined) {
+      groups[socket.group]["likes"][songId] = [];
+    } // Add user to likes list for the track
+
+
+    groups[socket.group]["likes"][songId].push(socket.spotifyId);
+    io.to(socket.group).emit("updateLikes", {
+      songId: songId,
+      users: groups[socket.group]["likes"][songId]
+    });
+  });
+  socket.on("unlikeSong", function (songId) {
+    // Find index of user in array and remove
+    var i = groups[socket.group]["likes"][songId].indexOf(socket.spotifyId);
+
+    if (i > -1) {
+      groups[socket.group]["likes"][songId].splice(i, 1);
+    }
+
+    io.to(socket.group).emit("updateLikes", {
+      songId: songId,
+      users: groups[socket.group]["likes"][songId]
     });
   });
 });
