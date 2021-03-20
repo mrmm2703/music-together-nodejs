@@ -78,12 +78,34 @@ function () {
         }
       });
       return words;
+    } // Get number of banned words for a user in given past hours
+
+  }, {
+    key: "getRecentBannedWords",
+    value: function getRecentBannedWords(spotifyId, pastHours) {
+      var _this = this;
+
+      return new Promise(function (resolve, reject) {
+        var sql = "SELECT COUNT(*) FROM bannedWordsUse WHERE banUsgDate " + ">= DATE_ADD(CURRENT_DATE(), INTERVAL -".concat(pastHours, " HOUR) AND banUsgSenderID = ?");
+        var query = mysql.format(sql, [spotifyId]);
+
+        _this.pool.query(query, function (error, data) {
+          if (error) {
+            console.log("DatabasePool::getRecentBannedWords(".concat(spotifyId, ", ").concat(pastHours, ")"));
+            console.log(error);
+            reject(error);
+          } else {
+            console.log(data);
+            resolve(data[0]["COUNT(*)"]);
+          }
+        });
+      });
     } // When a banned word was sent
 
   }, {
     key: "logBannedWord",
     value: function logBannedWord(word, spotifyId, groupId, message) {
-      var _this = this;
+      var _this2 = this;
 
       var sql = "INSERT INTO messages (msgSenderID, msgContent, msgGroupID) VALUES (?,?,?)";
       var query = mysql.format(sql, [spotifyId, message, groupId]);
@@ -99,7 +121,7 @@ function () {
           sql = "INSERT INTO bannedWordsUse (banUsgWordID, banUsgSenderID, banUsgGroupID, banUsgMsgID) " + "VALUES ((SELECT wordID FROM bannedWords WHERE word=?), ?, ?, ?)";
           query = mysql.format(sql, [word, spotifyId, groupId, id]);
 
-          _this.pool.query(query, function (error, response) {
+          _this2.pool.query(query, function (error, response) {
             if (error) {
               console.error("DatabasePool::logBannedWord(".concat(word, ", ").concat(spotifyId, ", ").concat(groupId, ", ").concat(id, ")"));
               console.error(error);
@@ -107,16 +129,6 @@ function () {
               console.error("DatabasePool::logBannedWord(".concat(word, ", ").concat(spotifyId, ", ").concat(groupId, ", ").concat(id, ") - SUCCESS"));
             }
           });
-        }
-      });
-      sql = "UPDATE bannedWords SET wordUses = wordUses + 1 WHERE word=?";
-      query = mysql.format(sql, [word]);
-      this.pool.query(query, function (error, response) {
-        if (error) {
-          console.error("DatabasePool::logBannedWord(".concat(word, ", ").concat(spotifyId, ", ").concat(groupId, ")"));
-          console.error(error);
-        } else {
-          console.error("DatabasePool::logBannedWord(".concat(word, ", ").concat(spotifyId, ", ").concat(groupId, ") - SUCCESS"));
         }
       });
     } // Log a message
@@ -138,6 +150,21 @@ function () {
         }
       });
       return id;
+    } // Ban a user
+
+  }, {
+    key: "banUser",
+    value: function banUser(spotifyId) {
+      var sql = "UPDATE users SET userBanned = 1 WHERE userSpotifyID=?";
+      var query = mysql.format(sql, [spotifyId]);
+      this.pool.query(query, function (error, data) {
+        if (error) {
+          console.log("DatabasePool::banUser(".concat(spotifyId, ")"));
+          console.log(error);
+        } else {
+          return true;
+        }
+      });
     } // Validation admin access token
 
   }, {

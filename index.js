@@ -5,6 +5,10 @@ const mysql = require("mysql")
 const DatabasePool = require("./db")
 const SpotifyConnection = require("./spotify")
 
+// Constants
+const BAN_TIME = 12 // Hours to check for banned words
+const BAN_WORD_LIMIT = 2 // Maximum allowed banned words in BAN_TIME (inclusive)
+
 // Create a DatabasePool object
 var db = new DatabasePool()
 
@@ -196,6 +200,16 @@ io.on("connection", (socket) => {
         if (banned) {
             // Tell client message was banned
             io.to(socket.id).emit("messageBanned", word)
+            // Check if auto-ban should happen
+            db.getRecentBannedWords(socket.spotifyId, BAN_TIME).then(count => {
+                console.log("BANNED COUNT: " + count)
+                if ((count + 1) > BAN_WORD_LIMIT) {
+                    console.log("LIMIT REACHED")
+                    // If user has reached limit of banned words, ban them
+                    db.banUser(socket.spotifyId)
+                    io.to(socket.id).emit("userBanned")
+                }
+            })
             // Log banned word usage and message in database
             db.logBannedWord(word, socket.spotifyId, socket.group, data)
         } else {

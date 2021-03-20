@@ -62,6 +62,25 @@ class DatabasePool {
         return words
     }
 
+    // Get number of banned words for a user in given past hours
+    getRecentBannedWords(spotifyId, pastHours) {
+        return new Promise((resolve, reject) => {
+            let sql = `SELECT COUNT(*) FROM bannedWordsUse WHERE banUsgDate ` + 
+            `>= DATE_ADD(CURRENT_DATE(), INTERVAL -${pastHours} HOUR) AND banUsgSenderID = ?`
+            let query = mysql.format(sql, [spotifyId])
+            this.pool.query(query, (error, data) => {
+                if (error) {
+                    console.log(`DatabasePool::getRecentBannedWords(${spotifyId}, ${pastHours})`)
+                    console.log(error)
+                    reject(error)
+                } else {
+                    console.log(data)
+                    resolve(data[0]["COUNT(*)"])
+                }
+            })
+        })
+    }
+
     // When a banned word was sent
     logBannedWord(word, spotifyId, groupId, message) {
         let sql = "INSERT INTO messages (msgSenderID, msgContent, msgGroupID) VALUES (?,?,?)"
@@ -89,17 +108,6 @@ class DatabasePool {
                 })
             }
         })
-
-        sql = "UPDATE bannedWords SET wordUses = wordUses + 1 WHERE word=?"
-        query = mysql.format(sql, [word])
-        this.pool.query(query, (error, response) => {
-            if (error) {
-                console.error(`DatabasePool::logBannedWord(${word}, ${spotifyId}, ${groupId})`)
-                console.error(error)
-            } else {
-                console.error(`DatabasePool::logBannedWord(${word}, ${spotifyId}, ${groupId}) - SUCCESS`)
-            }
-        })
     }
 
     // Log a message
@@ -118,6 +126,20 @@ class DatabasePool {
             }
         })
         return id
+    }
+
+    // Ban a user
+    banUser(spotifyId) {
+        let sql = "UPDATE users SET userBanned = 1 WHERE userSpotifyID=?"
+        let query = mysql.format(sql, [spotifyId])
+        this.pool.query(query, (error, data) => {
+            if (error) {
+                console.log(`DatabasePool::banUser(${spotifyId})`)
+                console.log(error)
+            } else {
+                return true
+            }
+        })
     }
 
     // Validation admin access token
