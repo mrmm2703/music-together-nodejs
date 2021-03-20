@@ -183,7 +183,7 @@ io.on("connection", function (socket) {
     var word;
 
     for (var i = 0; i < banned_words.length; i++) {
-      if (data.includes(banned_words[i])) {
+      if (data.toLowerCase().includes(banned_words[i])) {
         banned = true;
         word = banned_words[i];
         break;
