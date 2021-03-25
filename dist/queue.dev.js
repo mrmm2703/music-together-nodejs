@@ -15,18 +15,21 @@ function () {
     _classCallCheck(this, Queue);
 
     this.elements = [];
-  }
+  } // Add to queue
+
 
   _createClass(Queue, [{
     key: "enqueue",
     value: function enqueue(element) {
       this.elements.push(element);
-    }
+    } // Remove from queue
+
   }, {
     key: "dequeue",
     value: function dequeue() {
       return this.elements.shift();
-    }
+    } // Return next element to be removed
+
   }, {
     key: "peek",
     value: function peek() {

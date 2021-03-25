@@ -1,18 +1,22 @@
 // Queue data structure
+
 class Queue {
     // Instantiate array
     constructor() {
         this.elements = []
     }
 
+    // Add to queue
     enqueue(element) {
         this.elements.push(element)
     }
 
+    // Remove from queue
     dequeue() {
         return this.elements.shift()
     }
 
+    // Return next element to be removed
     peek() {
         if (this.isEmpty()) {
             return undefined

@@ -42,30 +42,8 @@ var io = require("socket.io")(server, {
 
 server.listen(3000);
 var spotify = new SpotifyConnection();
-var groups = {// "4729": {
-  //     "users": {
-  //         "user1": {
-  //             "prof_pic": "profPic.png",
-  //             "name": "Muhammad"
-  //         },
-  //         "user2": {
-  //             "prof_pic": "profPic.png",
-  //             "name": "Momo"
-  //         }
-  //     },
-  //     "likes": {
-  //         "track1_id": [
-  //             "user1_id", "user2_id"
-  //         ],
-  //         "track2_id": [
-  //             "user3_id", "user1_id"
-  //         ]
-  //     },
-  //     "host": "hostSpotifyId",
-  //     "hostSocket": "hostSocketId"
-  // }
-};
-var groups = {};
+var groups = {}; // Event listeners for the SpotifyConnection events
+
 spotify.on("follow_playlist", function (data) {
   console.log(data);
   groups[data.groupId]["collabId"] = data.playlistId;
@@ -73,7 +51,7 @@ spotify.on("follow_playlist", function (data) {
 });
 spotify.on("playlist", function (data) {
   io.to(data.groupId).emit("updatePlaylist", data.playlistId);
-});
+}); // Get the data formatted in a pretty string
 
 function getDate() {
   var d = new Date();
@@ -82,7 +60,8 @@ function getDate() {
 
 
 io.on("connection", function (socket) {
-  console.log("New connection.");
+  console.log("New connection."); // Authorise the SpotifyConnection object with credentials
+
   socket.on("auth_code", function (code) {
     spotify.activateAuthCode(code).then(function (d) {
       spotify.setToken(d);

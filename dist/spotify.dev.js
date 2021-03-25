@@ -24,7 +24,8 @@ var querystring = require("querystring");
 
 var queue = require("./queue");
 
-var EventEmitter = require("events");
+var EventEmitter = require("events"); // Some constants
+
 
 var clientId = "4a8fd972e1764fb8ac898d19335a9081";
 var clientSecret = "bfd33fd015ef48a4a39cd121b87f7091";
@@ -46,7 +47,8 @@ function (_EventEmitter) {
 
     _this = _possibleConstructorReturn(this, _getPrototypeOf(SpotifyConnection).call(this));
     console.log("Get authorisation code from:");
-    console.log("https://accounts.spotify.com/authorize?client_id=" + clientId + "&response_type=code&redirect_uri=" + redirectUri + "&scope=" + scope);
+    console.log("https://accounts.spotify.com/authorize?client_id=" + clientId + "&response_type=code&redirect_uri=" + redirectUri + "&scope=" + scope); // Initialise attributes
+
     _this.accessToken = null;
     _this.refreshToken = null;
     _this.tokenExpires = null;
@@ -77,7 +79,8 @@ function (_EventEmitter) {
             "Content-Type": "application/x-www-form-urlencoded",
             "Content-Length": Buffer.byteLength(data)
           }
-        };
+        }; // Retrun response data as JSON object
+
         var req = https.request(authCodeOptions, function (res) {
           res.on("data", function (d) {
             resolve(JSON.parse(d.toString()));
@@ -88,7 +91,8 @@ function (_EventEmitter) {
         });
         req.end(data);
       });
-    }
+    } // Set token data from API response
+
   }, {
     key: "setToken",
     value: function setToken(data) {
@@ -97,14 +101,15 @@ function (_EventEmitter) {
       this.accessToken = data.access_token;
       this.refreshToken = typeof data.refresh_token == "undefined" ? this.refreshToken : data.refresh_token;
       this.tokenExpires = data.expires_in;
-    }
+    } // Start refreshing token loop
+
   }, {
     key: "startRefreshSequence",
     value: function startRefreshSequence() {
       var _this2 = this;
 
       setTimeout(function () {
-        console.log("Refreshing token...");
+        console.log("Refreshing token..."); // Refresh access token and call self after tokenExpires retrieved
 
         _this2.refreshAccessToken().then(function (d) {
           _this2.setToken(d);
@@ -116,7 +121,8 @@ function (_EventEmitter) {
           _this2.startRefreshSequence();
         });
       }, (this.tokenExpires - 15) * 1000);
-    }
+    } // Refresh access token using refresh token
+
   }, {
     key: "refreshAccessToken",
     value: function refreshAccessToken() {
@@ -150,7 +156,8 @@ function (_EventEmitter) {
         });
         req.end(data);
       });
-    }
+    } // Add a new job to the queue
+
   }, {
     key: "addToQueue",
     value: function addToQueue(type, data, groupId) {
@@ -180,7 +187,8 @@ function (_EventEmitter) {
         this.running = true;
         this.runOperation();
       }
-    }
+    } // Run a single operation insode of the job queue
+
   }, {
     key: "runOperation",
     value: function runOperation() {
@@ -189,7 +197,7 @@ function (_EventEmitter) {
       var operation = this.operations.peek();
       console.log("NEW OPERATION:");
       console.log(operation);
-      console.log("");
+      console.log(""); // Check what kind of operation is being ran
 
       if (operation.type == "create_playlist") {
         console.log("RUNOPERATION FOUND A CREATE PLAYLIST COMMAND");
@@ -206,7 +214,8 @@ function (_EventEmitter) {
           return _this4.callerWait(waitTime);
         });
       }
-    }
+    } // Run after a createPlaylist response was successful
+
   }, {
     key: "createPlaylistCallback",
     value: function createPlaylistCallback(job) {
@@ -229,6 +238,7 @@ function (_EventEmitter) {
       console.log(job);
 
       if (typeof job.songUri != "undefined") {
+        // Add the track in the job to the collab playlist
         this.addToPlaylist(job.playlistId, job.songUri, job.groupId).then(function () {
           _this5.operations.dequeue();
 
@@ -247,19 +257,20 @@ function (_EventEmitter) {
         });
         this.runCaller();
       }
-    }
+    } // If API rate limit is reached
+
   }, {
     key: "callerWait",
     value: function callerWait(time) {
       var _this6 = this;
 
-      // console.log("RUNOEPRATION: TOO QUICK! MUST WAIT " + time + " SECONDS")
       setTimeout(function () {
         console.log("WAIT DONE! RUNNING RUN CALLER");
 
         _this6.runCaller();
       }, time * 1000);
-    }
+    } // Create new playlist in Spotify
+
   }, {
     key: "createPlaylist",
     value: function createPlaylist(name, description, groupId, songUri) {
@@ -315,7 +326,8 @@ function (_EventEmitter) {
         });
         req.end(data);
       });
-    }
+    } // Add to existing Spotify playlist
+
   }, {
     key: "addToPlaylist",
     value: function addToPlaylist(playlistId, songId, groupId) {

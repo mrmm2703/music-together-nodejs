@@ -3,6 +3,7 @@ const querystring = require("querystring")
 const queue = require("./queue")
 const EventEmitter = require("events")
 
+// Some constants
 const clientId = "4a8fd972e1764fb8ac898d19335a9081"
 const clientSecret = "bfd33fd015ef48a4a39cd121b87f7091"
 const base64auth = Buffer.from(clientId + ":" + clientSecret).toString("base64")
@@ -19,6 +20,7 @@ class SpotifyConnection extends EventEmitter {
         console.log("https://accounts.spotify.com/authorize?client_id=" + 
         clientId + "&response_type=code&redirect_uri=" + redirectUri + 
         "&scope=" + scope)
+        // Initialise attributes
         this.accessToken = null
         this.refreshToken = null
         this.tokenExpires = null
@@ -49,6 +51,7 @@ class SpotifyConnection extends EventEmitter {
                 }
             }
 
+            // Retrun response data as JSON object
             let req = https.request(authCodeOptions, res => {
                 res.on("data", d => {
                     resolve(JSON.parse(d.toString()))
@@ -63,6 +66,7 @@ class SpotifyConnection extends EventEmitter {
         })
     }
 
+    // Set token data from API response
     setToken(data) {
         console.log(data)
         console.log("")
@@ -71,9 +75,11 @@ class SpotifyConnection extends EventEmitter {
         this.tokenExpires = data.expires_in
     }
 
+    // Start refreshing token loop
     startRefreshSequence() {
         setTimeout(() => {
             console.log("Refreshing token...")
+            // Refresh access token and call self after tokenExpires retrieved
             this.refreshAccessToken().then((d) => {
                 this.setToken(d)
                 console.log("New token: " + this.accessToken)
@@ -84,6 +90,7 @@ class SpotifyConnection extends EventEmitter {
         }, (this.tokenExpires - 15) * 1000)
     }
 
+    // Refresh access token using refresh token
     refreshAccessToken() {
         return new Promise((resolve, reject) => {
             // POST data
@@ -119,6 +126,7 @@ class SpotifyConnection extends EventEmitter {
         })
     }
 
+    // Add a new job to the queue
     addToQueue(type, data, groupId) {
         console.log("ADDING TO QUEUE")
         this.operations.enqueue({
@@ -146,11 +154,13 @@ class SpotifyConnection extends EventEmitter {
         }
     }
 
+    // Run a single operation insode of the job queue
     runOperation() {
         let operation = this.operations.peek()
         console.log("NEW OPERATION:")
         console.log(operation)
         console.log("")
+        // Check what kind of operation is being ran
         if (operation.type == "create_playlist") {
             console.log("RUNOPERATION FOUND A CREATE PLAYLIST COMMAND")
 
@@ -166,6 +176,7 @@ class SpotifyConnection extends EventEmitter {
         }
     }
 
+    // Run after a createPlaylist response was successful
     createPlaylistCallback(job) {
         console.log("CREATE PLAYLIST CALLBACK")
         console.log(job)
@@ -182,6 +193,7 @@ class SpotifyConnection extends EventEmitter {
         console.log("PLAYLIST CALLBACK")
         console.log(job)
         if (typeof(job.songUri) != "undefined") {
+            // Add the track in the job to the collab playlist
             this.addToPlaylist(job.playlistId, job.songUri, job.groupId).then(() => {
                 this.operations.dequeue()
                 this.emit("playlist", {
@@ -200,14 +212,15 @@ class SpotifyConnection extends EventEmitter {
         }
     }
 
+    // If API rate limit is reached
     callerWait(time) {
-        // console.log("RUNOEPRATION: TOO QUICK! MUST WAIT " + time + " SECONDS")
         setTimeout(() => {
             console.log("WAIT DONE! RUNNING RUN CALLER")
             this.runCaller()
         }, time * 1000);
     }
 
+    // Create new playlist in Spotify
     createPlaylist(name, description, groupId, songUri) {
         return new Promise((resolve, reject) => {
             let str = ""
@@ -264,6 +277,7 @@ class SpotifyConnection extends EventEmitter {
         })
     }
 
+    // Add to existing Spotify playlist
     addToPlaylist(playlistId, songId, groupId) {
         console.log("MAKING PROMISE")
         return new Promise((resolve, reject) => {
