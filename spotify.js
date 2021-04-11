@@ -19,7 +19,7 @@ class SpotifyConnection extends EventEmitter {
         console.log("Get authorisation code from:")
         console.log("https://accounts.spotify.com/authorize?client_id=" + 
         clientId + "&response_type=code&redirect_uri=" + redirectUri + 
-        "&scope=" + scope)
+        "&scope=" + scope.replace(" ", "%20"))
         // Initialise attributes
         this.accessToken = null
         this.refreshToken = null
