@@ -2,10 +2,9 @@ const https = require("https")
 const querystring = require("querystring")
 const queue = require("./queue")
 const EventEmitter = require("events")
+import {clientId, clientSecret} from "./secrets.js"
 
 // Some constants
-const clientId = "4a8fd972e1764fb8ac898d19335a9081"
-const clientSecret = "bfd33fd015ef48a4a39cd121b87f7091"
 const base64auth = Buffer.from(clientId + ":" + clientSecret).toString("base64")
 const scope = "playlist-modify-public playlist-modify-private"
 const userId = "u051288nb9jvms048f9zqxn42"
